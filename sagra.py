@@ -584,87 +584,34 @@ if nome_atleta and data_cirurgia:
 
 # Modificar a seção de gráficos após a seleção do protocolo
 if protocolo_selecionado:
-    st.subheader(f'Análise do Protocolo: {protocolo_selecionado}')
+    st.subheader(f'Protocolo Selecionado: {protocolo_selecionado}')
     
-    # Processar dados do protocolo
-    df_protocolo = protocolos[protocolo_selecionado]
-    dados_processados = processar_dados_protocolo(df_protocolo, data_cirurgia)
+    # Encontrar o arquivo correspondente
+    arquivo_excel = None
+    for arquivo in os.listdir('planilhas_originais'):
+        if arquivo.startswith(protocolo_selecionado) and arquivo.endswith(('.xlsx', '.xls')):
+            arquivo_excel = arquivo
+            break
     
-    if dados_processados is not None and len(dados_processados) > 0:
-        # Converter datas para datetime
-        dados_processados['Data'] = pd.to_datetime(dados_processados['Data'])
+    if arquivo_excel:
+        caminho_arquivo = os.path.join('planilhas_originais', arquivo_excel)
+        st.success(f"Arquivo encontrado: {arquivo_excel}")
         
-        # Criar figura usando go.Figure em vez de px.line
-        fig_protocolo = go.Figure()
-        
-        # Adicionar linha principal
-        fig_protocolo.add_trace(go.Scatter(
-            x=dados_processados['Data'],
-            y=dados_processados['Valor'],
-            mode='lines+markers',
-            name='Evolução'
-        ))
-        
-        # Adicionar linha vertical para data atual usando shapes
-        data_atual = datetime.now()
-        fig_protocolo.add_shape(
-            type="line",
-            x0=data_atual,
-            y0=dados_processados['Valor'].min(),
-            x1=data_atual,
-            y1=dados_processados['Valor'].max(),
-            line=dict(
-                color="red",
-                width=1,
-                dash="dash"
-            ),
-            name="Data Atual"
-        )
-        
-        # Adicionar anotação para a data atual
-        fig_protocolo.add_annotation(
-            x=data_atual,
-            y=dados_processados['Valor'].max(),
-            text="Data Atual",
-            showarrow=True,
-            arrowhead=1,
-            ax=0,
-            ay=-40
-        )
-        
-        # Configurar o layout do gráfico
-        fig_protocolo.update_layout(
-            title=f'Evolução do Protocolo {protocolo_selecionado}',
-            xaxis_title="Data",
-            yaxis_title="Valor do Indicador",
-            hovermode='x unified',
-            showlegend=True
-        )
-        
-        st.plotly_chart(fig_protocolo)
-        
-        # Métricas do protocolo
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric(
-                "Valor Atual",
-                f"{dados_processados['Valor'].iloc[-1]:.2f}"
-            )
-        with col2:
-            st.metric(
-                "Valor Inicial",
-                f"{dados_processados['Valor'].iloc[0]:.2f}"
-            )
-        with col3:
-            variacao = ((dados_processados['Valor'].iloc[-1] - dados_processados['Valor'].iloc[0]) / 
-                       dados_processados['Valor'].iloc[0] * 100)
-            st.metric(
-                "Variação Total",
-                f"{variacao:.1f}%"
+        # Criar um link para download do arquivo
+        with open(caminho_arquivo, 'rb') as f:
+            st.download_button(
+                label="📥 Baixar Planilha",
+                data=f,
+                file_name=arquivo_excel,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         
-        # Tabela de dados
-        st.subheader('Dados Detalhados do Protocolo')
-        st.dataframe(dados_processados)
+        # Mostrar informações sobre o arquivo
+        st.info("""
+        Para visualizar o arquivo:
+        1. Clique no botão 'Baixar Planilha' acima
+        2. O arquivo será baixado para seu computador
+        3. Abra o arquivo com Excel ou outro programa compatível
+        """)
     else:
-        st.error("Não foi possível processar os dados do protocolo. Verifique o formato da planilha.") 
+        st.error("Arquivo não encontrado na pasta planilhas_originais") 
