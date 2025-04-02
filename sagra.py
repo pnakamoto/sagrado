@@ -42,7 +42,7 @@ def check_password():
             if username in CREDENTIALS and password == CREDENTIALS[username]:
                 st.session_state["password_correct"] = True
                 st.session_state["username"] = username
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Usuário ou senha incorretos")
         return False
