@@ -20,34 +20,34 @@ st.set_page_config(
     layout="wide"
 )
 
+# Credenciais (em um ambiente real, isso deveria estar em um arquivo de configuração seguro)
+CREDENTIALS = {
+    "admin": "admin123",
+    "user": "user123",
+    "luiz": "luizao"
+}
+
 # Função de autenticação
 def check_password():
     """Retorna `True` se o usuário tiver a senha correta."""
-    def password_entered():
-        """Verifica se a senha está correta."""
-        if st.session_state["username"] in st.session_state["credentials"]:
-            if st.session_state["password"] == st.session_state["credentials"][st.session_state["username"]]:
-                st.session_state["password_correct"] = True
-                del st.session_state["password"]  # Não armazena a senha
-            else:
-                st.session_state["password_correct"] = False
-
-    # Retorna `True` se o usuário tiver a senha correta.
     if "password_correct" not in st.session_state:
-        # Primeira execução, mostra o formulário de login
-        st.text_input("Usuário", on_change=password_entered, key="username")
-        st.text_input("Senha", type="password", on_change=password_entered, key="password")
-        if "password_correct" in st.session_state:
-            st.error("Usuário ou senha incorretos")
+        st.session_state["password_correct"] = False
+    
+    if not st.session_state["password_correct"]:
+        st.title("Login SAGRA")
+        username = st.text_input("Usuário")
+        password = st.text_input("Senha", type="password")
+        
+        if st.button("Entrar"):
+            if username in CREDENTIALS and password == CREDENTIALS[username]:
+                st.session_state["password_correct"] = True
+                st.session_state["username"] = username
+                st.experimental_rerun()
+            else:
+                st.error("Usuário ou senha incorretos")
         return False
-    return st.session_state["password_correct"]
-
-# Credenciais (em um ambiente real, isso deveria estar em um arquivo de configuração seguro)
-if "credentials" not in st.session_state:
-    st.session_state["credentials"] = {
-        "admin": "admin123",
-        "user": "user123"
-    }
+    
+    return True
 
 # Verifica a autenticação
 if not check_password():
@@ -56,58 +56,81 @@ if not check_password():
 def carregar_protocolos():
     """Carrega todos os protocolos de lesões da pasta planilhas_originais"""
     protocolos = {}
+    
+    # Verifica se a pasta existe
     if not os.path.exists('planilhas_originais'):
         st.error("Diretório 'planilhas_originais' não encontrado!")
         os.makedirs('planilhas_originais')
+        st.info("Diretório 'planilhas_originais' foi criado. Por favor, adicione os arquivos de protocolo.")
         return protocolos
     
+    # Lista todos os arquivos Excel
     arquivos_excel = [f for f in os.listdir('planilhas_originais') if f.endswith(('.xlsx', '.xls'))]
     
     if not arquivos_excel:
         st.error("Nenhum arquivo Excel encontrado no diretório 'planilhas_originais'!")
+        st.info("Por favor, adicione os arquivos de protocolo no formato Excel (.xlsx ou .xls)")
         return protocolos
     
     st.info(f"Encontrados {len(arquivos_excel)} arquivos Excel para processar")
     
+    # Contador para acompanhar o progresso
+    total_arquivos = len(arquivos_excel)
+    arquivos_processados = 0
+    
+    # Barra de progresso
+    progress_bar = st.progress(0)
+    
     for arquivo in arquivos_excel:
         try:
             caminho_arquivo = os.path.join('planilhas_originais', arquivo)
-            st.write(f"Tentando carregar: {arquivo}")
+            st.write(f"Processando: {arquivo}")
             
             # Tentar ler o arquivo
             df = pd.read_excel(caminho_arquivo)
             
             # Verificar se o DataFrame tem dados
             if df.empty:
-                st.warning(f"Arquivo {arquivo} está vazio!")
+                st.warning(f"⚠️ Arquivo {arquivo} está vazio!")
                 continue
                 
             # Verificar se tem pelo menos 2 colunas
             if len(df.columns) < 2:
-                st.warning(f"Arquivo {arquivo} não tem colunas suficientes!")
+                st.warning(f"⚠️ Arquivo {arquivo} não tem colunas suficientes!")
                 continue
             
             # Verificar se as colunas têm dados numéricos
             if not pd.to_numeric(df.iloc[:, 0], errors='coerce').notna().any():
-                st.warning(f"Primeira coluna do arquivo {arquivo} não contém números válidos!")
+                st.warning(f"⚠️ Primeira coluna do arquivo {arquivo} não contém números válidos!")
                 continue
                 
             if not pd.to_numeric(df.iloc[:, 1], errors='coerce').notna().any():
-                st.warning(f"Segunda coluna do arquivo {arquivo} não contém números válidos!")
+                st.warning(f"⚠️ Segunda coluna do arquivo {arquivo} não contém números válidos!")
                 continue
             
             nome_protocolo = os.path.splitext(arquivo)[0]
             protocolos[nome_protocolo] = df
-            st.success(f"Protocolo {nome_protocolo} carregado com sucesso!")
+            st.success(f"✅ Protocolo {nome_protocolo} carregado com sucesso!")
+            
+            # Atualiza a barra de progresso
+            arquivos_processados += 1
+            progress_bar.progress(arquivos_processados / total_arquivos)
             
         except Exception as e:
-            st.error(f"Erro ao carregar protocolo {arquivo}: {str(e)}")
+            st.error(f"❌ Erro ao carregar protocolo {arquivo}: {str(e)}")
             st.error("Detalhes do erro:", exc_info=True)
+            continue
     
     if not protocolos:
-        st.error("Nenhum protocolo foi carregado com sucesso!")
+        st.error("❌ Nenhum protocolo foi carregado com sucesso!")
+        st.info("""
+        Verifique se os arquivos Excel seguem o formato correto:
+        1. Primeira coluna: números (dias)
+        2. Segunda coluna: números (valores)
+        3. Não deve conter células vazias nas colunas principais
+        """)
     else:
-        st.success(f"Total de protocolos carregados: {len(protocolos)}")
+        st.success(f"✅ Total de protocolos carregados: {len(protocolos)}")
     
     return protocolos
 
