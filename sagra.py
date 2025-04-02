@@ -200,6 +200,49 @@ protocolos = carregar_protocolos()
 # Título principal
 st.title('SAGRA - Sistema de Acompanhamento e Gerenciamento de Reabilitação de Atletas')
 
+# Verifica se a pasta existe
+if not os.path.exists('planilhas_originais'):
+    st.error("Diretório 'planilhas_originais' não encontrado!")
+    os.makedirs('planilhas_originais')
+    st.info("Diretório 'planilhas_originais' foi criado. Por favor, adicione os arquivos de protocolo.")
+else:
+    # Lista todos os arquivos Excel
+    arquivos_excel = [f for f in os.listdir('planilhas_originais') if f.endswith(('.xlsx', '.xls'))]
+    
+    if not arquivos_excel:
+        st.error("Nenhum arquivo Excel encontrado no diretório 'planilhas_originais'!")
+        st.info("Por favor, adicione os arquivos de protocolo no formato Excel (.xlsx ou .xls)")
+    else:
+        st.success(f"Encontrados {len(arquivos_excel)} protocolos disponíveis")
+        
+        # Mostra a lista de protocolos
+        st.subheader("Protocolos Disponíveis")
+        
+        # Organiza os protocolos em colunas
+        col1, col2 = st.columns(2)
+        
+        for i, arquivo in enumerate(arquivos_excel):
+            caminho_arquivo = os.path.join('planilhas_originais', arquivo)
+            nome_protocolo = os.path.splitext(arquivo)[0]
+            
+            # Alterna entre as colunas
+            with col1 if i % 2 == 0 else col2:
+                with st.expander(nome_protocolo):
+                    st.write(f"Arquivo: {arquivo}")
+                    with open(caminho_arquivo, 'rb') as f:
+                        st.download_button(
+                            label="📥 Baixar Planilha",
+                            data=f,
+                            file_name=arquivo,
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                    st.info("""
+                    Para visualizar o arquivo:
+                    1. Clique no botão 'Baixar Planilha' acima
+                    2. O arquivo será baixado para seu computador
+                    3. Abra o arquivo com Excel ou outro programa compatível
+                    """)
+
 # Barra lateral para seleção de protocolo
 with st.sidebar:
     st.subheader('Seleção de Protocolo')
