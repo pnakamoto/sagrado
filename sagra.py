@@ -13,6 +13,46 @@ import plotly.graph_objects as go
 import os
 import pandas as pd
 
+# Configuração da página Streamlit
+st.set_page_config(
+    page_title="SAGRA - Reabilitação LCA",
+    page_icon="🏉",
+    layout="wide"
+)
+
+# Função de autenticação
+def check_password():
+    """Retorna `True` se o usuário tiver a senha correta."""
+    def password_entered():
+        """Verifica se a senha está correta."""
+        if st.session_state["username"] in st.session_state["credentials"]:
+            if st.session_state["password"] == st.session_state["credentials"][st.session_state["username"]]:
+                st.session_state["password_correct"] = True
+                del st.session_state["password"]  # Não armazena a senha
+            else:
+                st.session_state["password_correct"] = False
+
+    # Retorna `True` se o usuário tiver a senha correta.
+    if "password_correct" not in st.session_state:
+        # Primeira execução, mostra o formulário de login
+        st.text_input("Usuário", on_change=password_entered, key="username")
+        st.text_input("Senha", type="password", on_change=password_entered, key="password")
+        if "password_correct" in st.session_state:
+            st.error("Usuário ou senha incorretos")
+        return False
+    return st.session_state["password_correct"]
+
+# Credenciais (em um ambiente real, isso deveria estar em um arquivo de configuração seguro)
+if "credentials" not in st.session_state:
+    st.session_state["credentials"] = {
+        "admin": "admin123",
+        "user": "user123"
+    }
+
+# Verifica a autenticação
+if not check_password():
+    st.stop()
+
 def carregar_protocolos():
     """Carrega todos os protocolos de lesões da pasta planilhas_originais"""
     protocolos = {}
@@ -131,14 +171,7 @@ def processar_dados_protocolo(df, data_inicio):
         st.error("Verifique se a planilha está no formato correto: primeira coluna com dias (números) e segunda coluna com valores (números)")
         return None
 
-# Configuração da página Streamlit
-st.set_page_config(
-    page_title="SAGRA - Reabilitação LCA",
-    page_icon="🏉",
-    layout="wide"
-)
-
-# Carregar protocolos primeiro
+# Carregar protocolos apenas uma vez
 protocolos = carregar_protocolos()
 
 # Título principal
@@ -177,9 +210,6 @@ data_cirurgia = st.date_input(
     min_value=datetime(2023, 1, 1).date(),
     max_value=datetime.now().date()
 )
-
-# Adicionar após a inicialização do banco de dados
-protocolos = carregar_protocolos()
 
 # Processamento principal após inserção dos dados básicos
 if nome_atleta and data_cirurgia:
