@@ -48,8 +48,14 @@ def check_password():
 if not check_password():
     st.stop()
 
-# Título principal
-st.title('SAGRA - Sistema de Acompanhamento e Gerenciamento de Reabilitação de Atletas')
+# Título principal e botão de logout
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.title('SAGRA - Sistema de Acompanhamento e Gerenciamento de Reabilitação de Atletas')
+with col2:
+    if st.button("🚪 Logout"):
+        st.session_state["password_correct"] = False
+        st.rerun()
 
 # Verifica se a pasta existe
 if not os.path.exists('planilhas_originais'):
@@ -57,39 +63,44 @@ if not os.path.exists('planilhas_originais'):
     os.makedirs('planilhas_originais')
     st.info("Diretório 'planilhas_originais' foi criado. Por favor, adicione os arquivos de protocolo.")
 else:
-    # Lista todos os arquivos Excel
-    arquivos_excel = [f for f in os.listdir('planilhas_originais') if f.endswith(('.xlsx', '.xls'))]
-    
-    if not arquivos_excel:
-        st.error("Nenhum arquivo Excel encontrado no diretório 'planilhas_originais'!")
-        st.info("Por favor, adicione os arquivos de protocolo no formato Excel (.xlsx ou .xls)")
-    else:
-        st.success(f"Encontrados {len(arquivos_excel)} protocolos disponíveis")
+    try:
+        # Lista todos os arquivos Excel
+        arquivos_excel = [f for f in os.listdir('planilhas_originais') if f.endswith(('.xlsx', '.xls'))]
         
-        # Mostra a lista de protocolos
-        st.subheader("Protocolos Disponíveis")
-        
-        # Organiza os protocolos em colunas
-        col1, col2 = st.columns(2)
-        
-        for i, arquivo in enumerate(arquivos_excel):
-            caminho_arquivo = os.path.join('planilhas_originais', arquivo)
-            nome_protocolo = os.path.splitext(arquivo)[0]
+        if not arquivos_excel:
+            st.error("Nenhum arquivo Excel encontrado no diretório 'planilhas_originais'!")
+            st.info("Por favor, adicione os arquivos de protocolo no formato Excel (.xlsx ou .xls)")
+        else:
+            st.success(f"Encontrados {len(arquivos_excel)} protocolos disponíveis")
             
-            # Alterna entre as colunas
-            with col1 if i % 2 == 0 else col2:
-                with st.expander(nome_protocolo):
-                    st.write(f"Arquivo: {arquivo}")
-                    with open(caminho_arquivo, 'rb') as f:
-                        st.download_button(
-                            label="📥 Baixar Planilha",
-                            data=f,
-                            file_name=arquivo,
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-                    st.info("""
-                    Para visualizar o arquivo:
-                    1. Clique no botão 'Baixar Planilha' acima
-                    2. O arquivo será baixado para seu computador
-                    3. Abra o arquivo com Excel ou outro programa compatível
-                    """) 
+            # Mostra a lista de protocolos
+            st.subheader("Protocolos Disponíveis")
+            
+            # Organiza os protocolos em colunas
+            col1, col2 = st.columns(2)
+            
+            for i, arquivo in enumerate(arquivos_excel):
+                caminho_arquivo = os.path.join('planilhas_originais', arquivo)
+                nome_protocolo = os.path.splitext(arquivo)[0]
+                
+                # Alterna entre as colunas
+                with col1 if i % 2 == 0 else col2:
+                    with st.expander(nome_protocolo):
+                        try:
+                            with open(caminho_arquivo, 'rb') as f:
+                                st.download_button(
+                                    label="📥 Baixar Planilha",
+                                    data=f,
+                                    file_name=arquivo,
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                )
+                            st.info("""
+                            Para visualizar o arquivo:
+                            1. Clique no botão 'Baixar Planilha' acima
+                            2. O arquivo será baixado para seu computador
+                            3. Abra o arquivo com Excel ou outro programa compatível
+                            """)
+                        except Exception as e:
+                            st.error(f"Erro ao abrir o arquivo {arquivo}: {str(e)}")
+    except Exception as e:
+        st.error(f"Erro ao listar arquivos: {str(e)}") 
